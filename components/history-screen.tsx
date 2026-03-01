@@ -10,7 +10,7 @@ interface HistoryScreenProps {
 const historyItems = [
   {
     id: 1,
-    mode: "grandson" as const,
+    mode: "grandchild" as const,
     original: "우리 손주 보고 싶다. 밥은 잘 먹고 있니?",
     translated: "할머니가 보고 싶대~ 밥은 잘 챙겨 먹고 있어? 😊",
     date: "오늘",
@@ -18,7 +18,7 @@ const historyItems = [
   },
   {
     id: 2,
-    mode: "children" as const,
+    mode: "child" as const,
     original: "요즘 일이 많아서 힘들지? 건강 챙겨라.",
     translated: "요즘 바쁘지? 너무 무리하지 말고 건강 챙겨~ 💛",
     date: "어제",
@@ -26,7 +26,7 @@ const historyItems = [
   },
   {
     id: 3,
-    mode: "grandson" as const,
+    mode: "grandchild" as const,
     original: "이번 주말에 놀러 오렴. 맛있는 거 해놓을게.",
     translated: "이번 주말에 올래? 맛있는 거 해놓고 기다릴게~ 🍲",
     date: "3월 27일",
@@ -49,8 +49,8 @@ export function HistoryScreen({ largeText }: HistoryScreenProps) {
       </div>
 
       {historyItems.map((item) => {
-        const Illustration = item.mode === "grandson" ? BearIllustration : CoffeeIllustration
-        const bgColor = item.mode === "grandson" ? "bg-[#FFF5EC]" : "bg-[#EEF4FB]"
+        const Illustration = item.mode === "grandchild" ? BearIllustration : CoffeeIllustration
+        const bgColor = item.mode === "grandchild" ? "bg-[#FFF5EC]" : "bg-[#EEF4FB]"
 
         return (
           <div
@@ -61,7 +61,7 @@ export function HistoryScreen({ largeText }: HistoryScreenProps) {
               <div className="flex items-center gap-2">
                 <Illustration className="w-6 h-6" />
                 <span className={`font-bold text-foreground ${bodySize}`}>
-                  {item.mode === "grandson" ? "손주에게" : "자녀에게"}
+                  {item.mode === "grandchild" ? "손주에게" : "자녀에게"}
                 </span>
               </div>
               <span className={`text-muted-foreground ${smallSize}`}>

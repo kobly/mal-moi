@@ -8,6 +8,10 @@ type ChatMode = "grandchild" | "child"
 interface ChatRequestBody {
   message?: unknown
   mode?: unknown
+  body?: {
+    mode?: unknown
+  }
+  messages?: unknown
 }
 
 const MODE_PERSONAS: Record<ChatMode, string> = {
@@ -46,6 +50,39 @@ const jsonError = (message: string, status: number) =>
 const isValidMode = (mode: unknown): mode is ChatMode =>
   mode === "grandchild" || mode === "child"
 
+const extractMessage = (message: unknown, messages: unknown) => {
+  if (typeof message === "string" && message.trim().length > 0) {
+    return message.trim()
+  }
+
+  if (!Array.isArray(messages)) {
+    return null
+  }
+
+  const userMessages = messages.filter(
+    (item) =>
+      typeof item === "object" &&
+      item !== null &&
+      "role" in item &&
+      "content" in item &&
+      (item as { role: unknown }).role === "user",
+  )
+
+  const latestUserMessage = userMessages.at(-1)
+
+  if (
+    latestUserMessage &&
+    typeof latestUserMessage === "object" &&
+    "content" in latestUserMessage &&
+    typeof (latestUserMessage as { content: unknown }).content === "string"
+  ) {
+    const content = (latestUserMessage as { content: string }).content.trim()
+    return content.length > 0 ? content : null
+  }
+
+  return null
+}
+
 export async function POST(request: Request) {
   if (!process.env.GEMINI_API_KEY) {
     return jsonError("Server misconfiguration: GEMINI_API_KEY is missing.", 500)
@@ -59,9 +96,10 @@ export async function POST(request: Request) {
     return jsonError("Invalid JSON body.", 400)
   }
 
-  const { message, mode } = body
+  const mode = body.body?.mode ?? body.mode
+  const message = extractMessage(body.message, body.messages)
 
-  if (typeof message !== "string" || message.trim().length === 0) {
+  if (!message) {
     return jsonError("`message` must be a non-empty string.", 400)
   }
 
@@ -73,7 +111,7 @@ export async function POST(request: Request) {
     const result = streamText({
       model: google("gemini-1.5-flash"),
       system: SYSTEM_PROMPT,
-      prompt: `Persona:\n${MODE_PERSONAS[mode]}\n\nOriginal message:\n${message.trim()}`,
+      prompt: `Persona:\n${MODE_PERSONAS[mode]}\n\nOriginal message:\n${message}`,
     })
 
     return result.toDataStreamResponse()

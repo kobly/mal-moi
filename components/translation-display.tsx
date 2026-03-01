@@ -40,15 +40,15 @@ export function TranslationDisplay({
   const bodySize = largeText ? "text-[17px]" : "text-[14px]"
   const smallSize = largeText ? "text-[14px]" : "text-[12px]"
 
-  const isGrandson = mode === "grandson"
+  const isGrandchild = mode === "grandchild"
 
   const cardThemes = [
     {
-      bg: isGrandson ? "bg-[#FFF5EC]" : "bg-[#EEF4FB]",
-      iconBg: isGrandson ? "bg-primary/10" : "bg-accent/10",
-      iconText: isGrandson ? "text-primary" : "text-accent",
-      badge: isGrandson ? "bg-primary text-primary-foreground" : "bg-accent text-accent-foreground",
-      copyBg: isGrandson ? "bg-primary/10 text-primary" : "bg-accent/10 text-accent",
+      bg: isGrandchild ? "bg-[#FFF5EC]" : "bg-[#EEF4FB]",
+      iconBg: isGrandchild ? "bg-primary/10" : "bg-accent/10",
+      iconText: isGrandchild ? "text-primary" : "text-accent",
+      badge: isGrandchild ? "bg-primary text-primary-foreground" : "bg-accent text-accent-foreground",
+      copyBg: isGrandchild ? "bg-primary/10 text-primary" : "bg-accent/10 text-accent",
     },
     {
       bg: "bg-[#FFFBF0]",
@@ -83,7 +83,7 @@ export function TranslationDisplay({
       {/* AI Suggestions */}
       <div>
         <div className="flex items-center gap-1.5 mb-3">
-          <Sparkles className={`w-4 h-4 ${isGrandson ? "text-primary" : "text-accent"}`} />
+          <Sparkles className={`w-4 h-4 ${isGrandchild ? "text-primary" : "text-accent"}`} />
           <p className={`font-bold text-foreground ${titleSize}`}>
             {"AI 추천 표현"}
           </p>

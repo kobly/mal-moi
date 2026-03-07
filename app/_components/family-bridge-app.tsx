@@ -41,6 +41,7 @@ export function FamilyBridgeApp() {
               mode={selectedMode}
               largeText={largeText}
               onBack={() => setSelectedMode(null)}
+              onModeChange={setSelectedMode}
             />
           ))}
 

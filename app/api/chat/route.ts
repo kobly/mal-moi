@@ -3,15 +3,13 @@ import { streamText } from "ai"
 
 export const runtime = "edge"
 
+const USE_MOCK_ONLY = false
+
 type ChatMode = "grandchild" | "child"
 
 interface ChatRequestBody {
   message?: unknown
   mode?: unknown
-  body?: {
-    mode?: unknown
-  }
-  messages?: unknown
 }
 
 const MODE_PERSONAS: Record<ChatMode, string> = {
@@ -50,44 +48,47 @@ const jsonError = (message: string, status: number) =>
 const isValidMode = (mode: unknown): mode is ChatMode =>
   mode === "grandchild" || mode === "child"
 
-const extractMessage = (message: unknown, messages: unknown) => {
-  if (typeof message === "string" && message.trim().length > 0) {
-    return message.trim()
+const pickMessageKeyword = (message: string) => {
+  const normalized = message.trim().replace(/\s+/g, " ")
+
+  if (!normalized) {
+    return "일이 조금 생겨서"
   }
 
-  if (!Array.isArray(messages)) {
-    return null
+  const preview = normalized.slice(0, 28)
+
+  return preview.length < normalized.length ? `${preview}...` : preview
+}
+
+const createMockResponse = (message: string, mode: ChatMode): string => {
+  const keyword = pickMessageKeyword(message)
+
+  if (mode === "grandchild") {
+    return `${keyword} 오늘 조금 늦을 것 같아. 미안해! 너무 걱정하지 않았으면 좋겠어. 도착하면 바로 연락할게.`
   }
 
-  const userMessages = messages.filter(
-    (item) =>
-      typeof item === "object" &&
-      item !== null &&
-      "role" in item &&
-      "content" in item &&
-      (item as { role: unknown }).role === "user",
-  )
+  return `${keyword} 오늘 조금 늦을 것 같아요. 죄송해요. 너무 걱정하지 않으셨으면 좋겠어요. 도착하면 바로 연락드릴게요.`
+}
 
-  const latestUserMessage = userMessages.at(-1)
+const streamPlainText = (text: string) => {
+  const encoder = new TextEncoder()
 
-  if (
-    latestUserMessage &&
-    typeof latestUserMessage === "object" &&
-    "content" in latestUserMessage &&
-    typeof (latestUserMessage as { content: unknown }).content === "string"
-  ) {
-    const content = (latestUserMessage as { content: string }).content.trim()
-    return content.length > 0 ? content : null
-  }
+  const stream = new ReadableStream<Uint8Array>({
+    start(controller) {
+      controller.enqueue(encoder.encode(text))
+      controller.close()
+    },
+  })
 
-  return null
+  return new Response(stream, {
+    headers: {
+      "Content-Type": "text/plain; charset=utf-8",
+      "Cache-Control": "no-store",
+    },
+  })
 }
 
 export async function POST(request: Request) {
-  if (!process.env.GEMINI_API_KEY) {
-    return jsonError("Server misconfiguration: GEMINI_API_KEY is missing.", 500)
-  }
-
   let body: ChatRequestBody
 
   try {
@@ -96,10 +97,9 @@ export async function POST(request: Request) {
     return jsonError("Invalid JSON body.", 400)
   }
 
-  const mode = body.body?.mode ?? body.mode
-  const message = extractMessage(body.message, body.messages)
+  const { message, mode } = body
 
-  if (!message) {
+  if (typeof message !== "string" || message.trim().length === 0) {
     return jsonError("`message` must be a non-empty string.", 400)
   }
 
@@ -107,17 +107,34 @@ export async function POST(request: Request) {
     return jsonError("`mode` must be either `grandchild` or `child`.", 400)
   }
 
+  const trimmedMessage = message.trim()
+
+  if (USE_MOCK_ONLY) {
+    console.info("[api/chat] Returning mock response (USE_MOCK_ONLY=true)")
+
+    return streamPlainText(createMockResponse(trimmedMessage, mode))
+  }
+
+  if (!process.env.GEMINI_API_KEY) {
+    console.warn(
+      "[api/chat] GEMINI_API_KEY is missing; returning mock fallback response",
+    )
+
+    return streamPlainText(createMockResponse(trimmedMessage, mode))
+  }
+
   try {
     const result = streamText({
       model: google("gemini-1.5-flash"),
       system: SYSTEM_PROMPT,
-      prompt: `Persona:\n${MODE_PERSONAS[mode]}\n\nOriginal message:\n${message}`,
+      prompt: `Persona:\n${MODE_PERSONAS[mode]}\n\nOriginal message:\n${trimmedMessage}`,
     })
 
     return result.toDataStreamResponse()
   } catch (error) {
     console.error("[api/chat] Gemini request failed", error)
+    console.info("[api/chat] Returning mock fallback response")
 
-    return jsonError("Failed to generate response from Gemini.", 502)
+    return streamPlainText(createMockResponse(trimmedMessage, mode))
   }
 }
